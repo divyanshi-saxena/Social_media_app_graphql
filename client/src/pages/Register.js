@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { Button, Form } from "semantic-ui-react";
 import { useMutation, gql } from "@apollo/client";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "../util/hooks";
+import { AuthContext } from "../context/auth";
 
 const REGISTER_USER = gql`
   mutation register(
@@ -29,6 +30,7 @@ const REGISTER_USER = gql`
 `;
 
 function Register(props) {
+  const context = useContext(AuthContext);
   const navigate = useNavigate();
   const [errors, setErrors] = useState({});
   // const [values, setValues] = useState({
@@ -46,12 +48,15 @@ function Register(props) {
   });
 
   const [addUser, { loading }] = useMutation(REGISTER_USER, {
-    // update: (proxy, result) => navigate("/"),
-    onCompleted: (data) => {
-      console.log("data: ", data);
-      // props.history.push("/");
+    update: (proxy, { data: { register: userData } }) => {
+      context.login(userData);
       navigate("/");
     },
+    // onCompleted: (data) => {
+    //   console.log("data: ", data);
+    //   // props.history.push("/");
+    //   navigate("/");
+    // },
     onError: (err) => {
       console.log("errors:", err?.graphQLErrors[0]?.extensions?.errors);
       if (err) setErrors(err?.graphQLErrors[0]?.extensions?.errors);
@@ -109,7 +114,7 @@ function Register(props) {
           Register
         </Button>
       </Form>
-      {/* {Object.keys(errors).length > 0 && (
+      {Object.keys(errors).length > 0 && (
         <div className="ui error message">
           <ul className="list">
             {Object.values(errors).map((value) => (
@@ -117,7 +122,7 @@ function Register(props) {
             ))}
           </ul>
         </div>
-      )} */}
+      )}
     </div>
   );
 }
