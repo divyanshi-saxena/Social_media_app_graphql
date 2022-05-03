@@ -8,7 +8,6 @@ import {
   Label,
   Image,
   Form,
-  Input,
 } from "semantic-ui-react";
 import moment from "moment";
 import LikeButton from "../components/LikeButton";
