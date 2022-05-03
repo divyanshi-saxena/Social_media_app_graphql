@@ -1,11 +1,21 @@
-import React, { useContext } from "react";
-import { useQuery, gql } from "@apollo/client";
-import { Button, Card, Grid, Icon, Label, Image } from "semantic-ui-react";
+import React, { useContext, useRef, useState } from "react";
+import { useQuery, gql, useMutation } from "@apollo/client";
+import {
+  Button,
+  Card,
+  Grid,
+  Icon,
+  Label,
+  Image,
+  Form,
+  Input,
+} from "semantic-ui-react";
 import moment from "moment";
 import LikeButton from "../components/LikeButton";
 import { AuthContext } from "../context/auth";
 import DeleteButton from "../components/DeleteButton";
 import { useNavigate, useParams } from "react-router";
+import MyPopup from "../util/MyPopup";
 
 const FETCH_POST_QUERY = gql`
   query ($postId: ID!) {
@@ -29,17 +39,43 @@ const FETCH_POST_QUERY = gql`
   }
 `;
 
-const SUBMIT_COMMENT_MUTATION
+const SUBMIT_COMMENT_MUTATION = gql`
+  mutation ($postId: String!, $body: String!) {
+    createComment(postId: $postId, body: $body) {
+      id
+      commentCount
+      comments {
+        id
+        body
+        createdAt
+        username
+      }
+    }
+  }
+`;
 
 function SinglePost(props) {
   const { user } = useContext(AuthContext);
+  const commentInputRef = useRef(null);
   const navigate = useNavigate();
   const { postId } = useParams();
   // const postId = props.match.params.postId;
   console.log("postId: ", postId);
+  const [comment, setComment] = useState("");
   const { data: { getPost } = {} } = useQuery(FETCH_POST_QUERY, {
     variables: {
       postId,
+    },
+  });
+
+  const [submitComment] = useMutation(SUBMIT_COMMENT_MUTATION, {
+    update() {
+      setComment("");
+      commentInputRef.current.blur();
+    },
+    variables: {
+      postId,
+      body: comment,
     },
   });
 
@@ -83,25 +119,51 @@ function SinglePost(props) {
               <hr />
               <Card.Content extra>
                 <LikeButton user={user} post={{ id, likeCount, likes }} />
-                <Button
-                  as="div"
-                  labelPosition="right"
-                  onClick={() => console.log("comment on post")}
-                >
-                  <Button basic color="blue">
-                    <Icon name="comments" />
+                <MyPopup content="Comments">
+                  <Button
+                    as="div"
+                    labelPosition="right"
+                    onClick={() => console.log("comment on post")}
+                  >
+                    <Button basic color="blue">
+                      <Icon name="comments" />
+                    </Button>
+                    <Label basic color="blue" pointing="left">
+                      {commentCount}
+                    </Label>
                   </Button>
-                  <Label basic color="blue" pointing="left">
-                    {commentCount}
-                  </Label>
-                </Button>
+                </MyPopup>
                 {user && user.username === username && (
                   <DeleteButton postId={id} callback={deletePostCallback} />
                 )}
               </Card.Content>
             </Card>
             {user && (
-              <Card fluid></Card>
+              <Card fluid>
+                <Card.Content>
+                  <p>Post a comment</p>
+                  <Form>
+                    <div className="ui action input fluid">
+                      <input
+                        type="text"
+                        placeholder="Comment..."
+                        name="comment"
+                        value={comment}
+                        onChange={(event) => setComment(event.target.value)}
+                        ref={commentInputRef}
+                      />
+                      <button
+                        type="submit"
+                        className="ui button teal"
+                        disabled={comment.trim() === ""}
+                        onClick={submitComment}
+                      >
+                        Submit
+                      </button>
+                    </div>
+                  </Form>
+                </Card.Content>
+              </Card>
             )}
             {comments.map((comment) => (
               <Card fluid key={comment.id}>
